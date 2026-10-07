@@ -1,6 +1,7 @@
 // server.ts
 import express from "express";
 import path from "path";
+import fs from "fs";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import Razorpay from "razorpay";
@@ -327,9 +328,36 @@ var startServer = async () => {
     });
     app.use(viteDevServer.middlewares);
   } else {
-    app.use(express.static(path.resolve("dist")));
+    const distPath = path.resolve(process.cwd(), "dist");
+    const indexPath = path.resolve(distPath, "index.html");
+    if (!fs.existsSync(indexPath)) {
+      console.warn(`[InvoiceForge] dist/index.html not found. Building client bundle dynamically...`);
+      try {
+        const { execSync } = await import("child_process");
+        execSync("npx vite build", { stdio: "inherit" });
+      } catch (buildErr) {
+        console.error("[InvoiceForge] Dynamic build error:", buildErr.message);
+      }
+    }
+    app.use(express.static(distPath));
     app.get("*", (_req, res) => {
-      res.sendFile(path.resolve("dist/index.html"));
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(503).send(`
+          <!DOCTYPE html>
+          <html>
+            <head><meta charset="utf-8"/><title>Build Required</title></head>
+            <body style="font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#f8fafc;padding:40px;text-align:center;">
+              <h1 style="color:#6366f1;">InvoiceForge Deployment Initializing</h1>
+              <p>The client bundle (<code>dist/index.html</code>) was not found.</p>
+              <p>In your Render Web Service settings, please ensure your <strong>Build Command</strong> is set to:<br/><br/>
+                 <code style="background:#1e293b;padding:8px 16px;border-radius:8px;color:#38bdf8;">npm install && npm run build</code>
+              </p>
+            </body>
+          </html>
+        `);
+      }
     });
   }
   app.listen(PORT, "0.0.0.0", () => {
