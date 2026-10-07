@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="forgeGrad" x1="64" y1="64" x2="448" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="50%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#0EA5E9" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="160" y1="160" x2="352" y2="352" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <filter id="shadow" x="30" y="30" width="452" height="452" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#0f172a" flood-opacity="0.35" />
+    </filter>
+  </defs>
+  <!-- Background Rounded Shield -->
+  <rect width="512" height="512" rx="112" fill="#0F172A" />
+  
+  <!-- Subtle border highlight -->
+  <rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="#334155" stroke-width="4" stroke-opacity="0.6" />
+  
+  <!-- Main Document Base -->
+  <g filter="url(#shadow)">
+    <path d="M140 100 C140 84 154 70 170 70 L300 70 L372 142 L372 412 C372 428 358 442 342 442 L170 442 C154 442 140 428 140 412 Z" fill="#1E293B" />
+    <!-- Folded Corner -->
+    <path d="M300 70 L300 132 C300 138 304 142 310 142 L372 142 Z" fill="#334155" />
+    
+    <!-- Invoice Header Bar -->
+    <rect x="180" y="130" width="90" height="14" rx="7" fill="url(#forgeGrad)" />
+    
+    <!-- Horizontal invoice item lines -->
+    <rect x="180" y="180" width="152" height="10" rx="5" fill="#475569" />
+    <rect x="180" y="210" width="152" height="10" rx="5" fill="#334155" />
+    <rect x="180" y="240" width="110" height="10" rx="5" fill="#334155" />
+    <rect x="180" y="270" width="130" height="10" rx="5" fill="#334155" />
+    
+    <!-- Decorative Stamp / Badge (Forge Spark) -->
+    <circle cx="316" cy="336" r="38" fill="url(#accentGrad)" />
+    <!-- Checkmark inside badge -->
+    <path d="M302 336 L312 346 L332 324" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Total Highlight Line -->
+    <rect x="180" y="365" width="80" height="12" rx="6" fill="#94A3B8" />
+  </g>
+</svg>
