@@ -4,7 +4,7 @@
 
 InvoiceForge is a free-forever invoice, quotation, customer, product/service, payment, and business management Progressive Web App built with React, TypeScript, Tailwind CSS, and a real Supabase PostgreSQL database with Row Level Security.
 
-Zero subscriptions. Zero demo/fake data. Zero artificial limits.
+
 
 ---
 
@@ -30,77 +30,6 @@ Zero subscriptions. Zero demo/fake data. Zero artificial limits.
 - **PWA**: `vite-plugin-pwa`, Workbox, Web App Manifest
 - **Backend & Database**: Supabase (PostgreSQL, Supabase Auth, Row Level Security)
 
----
-
-## 📋 Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-or-anon-key
-DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT].supabase.co:5432/postgres
-```
-
-> **Security Note**: Never commit `.env` to version control. Only safe public client variables (`VITE_SUPABASE_*`) are exposed to the browser. The database connection string `DATABASE_URL` is for server-side migrations only.
-
----
-
-## 🗄 Database Migrations (Supabase)
-
-To set up the required schema, tables, indexes, and Row Level Security policies:
-
-1. Open your [Supabase Dashboard](https://supabase.com).
-2. Navigate to the **SQL Editor**.
-3. Open `supabase/migrations/20260101000000_initial_schema.sql` from this repository.
-4. Run the SQL script.
-
-This will automatically create:
-- `profiles`
-- `businesses`
-- `customers`
-- `products`
-- `invoices` & `invoice_items`
-- `quotations` & `quotation_items`
-- `payments`
-- `notifications` & `activities`
-- Performance indexes & strict RLS policies on all tables.
-
----
-
-## 🚀 Local Development
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
----
-
-## 📦 Production Build
-
-```bash
-npm run build
-```
-
-The production assets and service worker will be generated in the `dist` folder, ready for deployment to Vercel, Netlify, Cloudflare Pages, or Docker.
-
----
-
-## 📱 PWA Installation
-
-- **Desktop (Chrome/Edge)**: Click the **Install App** button in the header or the address bar install icon.
-- **Android**: Tap the **Install App** button to add to your home screen.
-- **iOS Safari**: Tap the **Share** button (box with upward arrow) and select **Add to Home Screen**.
-
----
 
 ## 🔒 Security
 
