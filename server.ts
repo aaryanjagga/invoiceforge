@@ -403,54 +403,6 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/subscription/simulate-test-upgrade
- * Allows immediate Pro upgrade in test mode when Razorpay credentials have not been activated
- */
-app.post('/api/subscription/simulate-test-upgrade', async (req: Request, res: Response) => {
-  const { userId } = req.body;
-  if (!userId) {
-    res.status(400).json({ error: 'User ID is required' });
-    return;
-  }
-
-  try {
-    const testOrderId = `test_order_${Date.now()}`;
-    const testPaymentId = `test_pay_${Date.now()}`;
-
-    await pool
-      .query(
-        `INSERT INTO public.subscription_payments 
-         (user_id, razorpay_order_id, razorpay_payment_id, amount, currency, status, receipt) 
-         VALUES ($1, $2, $3, 99.0, 'INR', 'captured', 'test_mode')`,
-        [userId, testOrderId, testPaymentId]
-      )
-      .catch(() => {});
-
-    await pool.query(
-      `INSERT INTO public.subscriptions 
-       (user_id, plan, subscription_status, subscription_started_at, subscription_expires_at, razorpay_order_id, updated_at) 
-       VALUES ($1, 'pro', 'pro', NOW(), NOW() + INTERVAL '30 days', $2, NOW()) 
-       ON CONFLICT (user_id) DO UPDATE SET 
-         plan = 'pro', 
-         subscription_status = 'pro', 
-         subscription_started_at = NOW(), 
-         subscription_expires_at = NOW() + INTERVAL '30 days', 
-         razorpay_order_id = $2, 
-         updated_at = NOW()`,
-      [userId, testOrderId]
-    );
-
-    res.json({
-      success: true,
-      message: 'Test Pro Plan activated successfully for 30 days.',
-    });
-  } catch (err: any) {
-    console.error('Test upgrade error:', err);
-    res.status(500).json({ error: 'Failed to activate test subscription' });
-  }
-});
-
-/**
  * POST /api/subscription/verify-payment
  * Cryptographically verifies Razorpay payment signature before granting Pro status
  */

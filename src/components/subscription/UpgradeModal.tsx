@@ -36,34 +36,6 @@ export const UpgradeModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [simulating, setSimulating] = useState(false);
-
-  const handleSimulateUpgrade = async () => {
-    if (!user?.id) return;
-    setSimulating(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/subscription/simulate-test-upgrade', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        await refreshSubscription();
-        setSuccessMessage('Test Pro Plan activated successfully! Unlimited invoices enabled.');
-        setTimeout(() => {
-          onClose();
-        }, 1800);
-      } else {
-        throw new Error(data.error || 'Failed to activate test mode.');
-      }
-    } catch (simErr: any) {
-      setError(simErr.message);
-    } finally {
-      setSimulating(false);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -199,26 +171,11 @@ export const UpgradeModal: React.FC<Props> = ({ isOpen, onClose }) => {
         {/* Modal Body */}
         <div className="p-6 sm:p-8 space-y-6">
           {error && (
-            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs space-y-2">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                <div>
-                  <p className="font-semibold text-rose-800 dark:text-rose-200">Upgrade Notice</p>
-                  <p className="mt-0.5 leading-relaxed">{error}</p>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-rose-200 dark:border-rose-900/60 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Want to test Pro features without waiting for live gateway keys?
-                </span>
-                <button
-                  type="button"
-                  onClick={handleSimulateUpgrade}
-                  disabled={simulating}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer disabled:opacity-50 transition"
-                >
-                  {simulating ? 'Activating Pro...' : 'Activate Pro (Test Mode)'}
-                </button>
+            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+              <div>
+                <p className="font-semibold text-rose-800 dark:text-rose-200">Upgrade Notice</p>
+                <p className="mt-0.5 leading-relaxed">{error}</p>
               </div>
             </div>
           )}
