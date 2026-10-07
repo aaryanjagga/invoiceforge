@@ -46,6 +46,7 @@ export default defineConfig(() => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           navigateFallbackDenylist: [/^\/api/],
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         },
         devOptions: {
           enabled: false,
@@ -55,8 +56,11 @@ export default defineConfig(() => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
+        '@': path.resolve(import.meta.dirname, './src'),
       },
+    },
+    build: {
+      chunkSizeWarningLimit: 2500,
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
