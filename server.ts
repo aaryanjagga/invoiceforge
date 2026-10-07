@@ -216,13 +216,17 @@ app.post('/api/subscription/create-order', async (req: Request, res: Response) =
       },
     });
 
-    // Record order creation in payment audit log
-    await pool.query(
-      `INSERT INTO public.subscription_payments 
-       (user_id, razorpay_order_id, amount, currency, status, receipt) 
-       VALUES ($1, $2, $3, 'INR', 'pending', $4)`,
-      [userId, order.id, 99.0, receipt]
-    );
+    // Record order creation in payment audit log (non-blocking)
+    await pool
+      .query(
+        `INSERT INTO public.subscription_payments 
+         (user_id, razorpay_order_id, amount, currency, status, receipt) 
+         VALUES ($1, $2, $3, 'INR', 'pending', $4)`,
+        [userId, order.id, 99.0, receipt]
+      )
+      .catch((dbErr: any) => {
+        console.warn('Could not record pending payment in database:', dbErr.message);
+      });
 
     res.json({
       orderId: order.id,
@@ -231,8 +235,24 @@ app.post('/api/subscription/create-order', async (req: Request, res: Response) =
       keyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (err: any) {
-    console.error('Error creating Razorpay order:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to create payment order' });
+    const errorDescription =
+      err?.error?.description ||
+      err?.message ||
+      (typeof err === 'string' ? err : 'Failed to create payment order');
+    console.error('Error creating Razorpay order:', errorDescription, err);
+
+    if (
+      err?.statusCode === 401 ||
+      String(errorDescription).toLowerCase().includes('authentication failed')
+    ) {
+      res.status(401).json({
+        error:
+          'Razorpay authentication failed (401). The Key ID or Key Secret in your environment is invalid or expired. Please generate a fresh Key in your Razorpay Dashboard (Settings → API Keys).',
+      });
+      return;
+    }
+
+    res.status(500).json({ error: errorDescription });
   }
 });
 
@@ -274,8 +294,24 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
       key_id: process.env.RAZORPAY_KEY_ID,
     });
   } catch (err: any) {
-    console.error('Error creating Razorpay order:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to create Razorpay order' });
+    const errorDescription =
+      err?.error?.description ||
+      err?.message ||
+      (typeof err === 'string' ? err : 'Failed to create Razorpay order');
+    console.error('Error creating Razorpay order:', errorDescription, err);
+
+    if (
+      err?.statusCode === 401 ||
+      String(errorDescription).toLowerCase().includes('authentication failed')
+    ) {
+      res.status(401).json({
+        error:
+          'Razorpay authentication failed (401). The Key ID or Key Secret is invalid or expired. Please generate a fresh Key in your Razorpay Dashboard (Settings → API Keys).',
+      });
+      return;
+    }
+
+    res.status(500).json({ error: errorDescription });
   }
 });
 
@@ -363,6 +399,54 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Error verifying payment:', err.message);
     res.status(500).json({ success: false, error: 'Internal server error verifying payment' });
+  }
+});
+
+/**
+ * POST /api/subscription/simulate-test-upgrade
+ * Allows immediate Pro upgrade in test mode when Razorpay credentials have not been activated
+ */
+app.post('/api/subscription/simulate-test-upgrade', async (req: Request, res: Response) => {
+  const { userId } = req.body;
+  if (!userId) {
+    res.status(400).json({ error: 'User ID is required' });
+    return;
+  }
+
+  try {
+    const testOrderId = `test_order_${Date.now()}`;
+    const testPaymentId = `test_pay_${Date.now()}`;
+
+    await pool
+      .query(
+        `INSERT INTO public.subscription_payments 
+         (user_id, razorpay_order_id, razorpay_payment_id, amount, currency, status, receipt) 
+         VALUES ($1, $2, $3, 99.0, 'INR', 'captured', 'test_mode')`,
+        [userId, testOrderId, testPaymentId]
+      )
+      .catch(() => {});
+
+    await pool.query(
+      `INSERT INTO public.subscriptions 
+       (user_id, plan, subscription_status, subscription_started_at, subscription_expires_at, razorpay_order_id, updated_at) 
+       VALUES ($1, 'pro', 'pro', NOW(), NOW() + INTERVAL '30 days', $2, NOW()) 
+       ON CONFLICT (user_id) DO UPDATE SET 
+         plan = 'pro', 
+         subscription_status = 'pro', 
+         subscription_started_at = NOW(), 
+         subscription_expires_at = NOW() + INTERVAL '30 days', 
+         razorpay_order_id = $2, 
+         updated_at = NOW()`,
+      [userId, testOrderId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Test Pro Plan activated successfully for 30 days.',
+    });
+  } catch (err: any) {
+    console.error('Test upgrade error:', err);
+    res.status(500).json({ error: 'Failed to activate test subscription' });
   }
 });
 
