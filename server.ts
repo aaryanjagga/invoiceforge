@@ -21,7 +21,9 @@ app.use(
 
 // PostgreSQL connection pool for secure server-side database updates
 const createDbPool = () => {
-  const dbUrl = process.env.DATABASE_URL || '';
+  const DEFAULT_DB_URL =
+    'postgresql://postgres.ebkorrlmqyxnhmtgixvn:%40Aaryanjagga122510030607@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres';
+  const dbUrl = process.env.DATABASE_URL || DEFAULT_DB_URL;
   try {
     const url = new URL(dbUrl);
     return new pg.Pool({

@@ -10,12 +10,21 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Retrieve configuration strictly from build/runtime environment variables
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() || '';
+// Default project credentials (code configuration fallback)
+const DEFAULT_SUPABASE_URL = 'https://ebkorrlmqyxnhmtgixvn.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_OGqH5qFR4RBL8XZGrpggrg_OVHTe-Zl';
+
+// Retrieve configuration from build/runtime environment variables or code configuration
+const supabaseUrl = (
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
+  DEFAULT_SUPABASE_URL
+).trim();
+
 const supabaseKey = (
   (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)
-)?.trim() || '';
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+  DEFAULT_SUPABASE_KEY
+).trim();
 
 // Fallback placeholder so createClient does not crash module evaluation if variables are empty
 const fallbackUrl = 'https://placeholder.supabase.co';
