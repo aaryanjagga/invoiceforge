@@ -175,6 +175,111 @@ app.post("/api/subscription/create-order", async (req, res) => {
     res.status(500).json({ error: err.message || "Failed to create payment order" });
   }
 });
+app.post("/api/create-order", async (req, res) => {
+  const razorpay = getRazorpayInstance();
+  if (!razorpay) {
+    res.status(401).json({ error: "Razorpay keys are not configured or invalid" });
+    return;
+  }
+  try {
+    const rawAmount = req.body.amount;
+    const amount = Number(rawAmount) || 9900;
+    const currency = (req.body.currency || "INR").toUpperCase();
+    const receipt = req.body.receipt || `rcpt_${Date.now()}`;
+    const notes = req.body.notes || {};
+    if (amount < 100) {
+      res.status(400).json({ error: "Minimum amount must be at least 100 paise (\u20B91)" });
+      return;
+    }
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount),
+      currency,
+      receipt: String(receipt).slice(0, 40),
+      notes
+    });
+    res.json({
+      order_id: order.id,
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      key_id: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (err) {
+    console.error("Error creating Razorpay order:", err.message);
+    res.status(500).json({ error: err.message || "Failed to create Razorpay order" });
+  }
+});
+app.post("/api/verify-payment", async (req, res) => {
+  const order_id = req.body.razorpay_order_id || req.body.order_id;
+  const payment_id = req.body.razorpay_payment_id || req.body.payment_id;
+  const signature = req.body.razorpay_signature || req.body.signature;
+  const userId = req.body.userId;
+  if (!order_id || !payment_id || !signature) {
+    res.status(400).json({
+      success: false,
+      error: "Missing required parameters: order_id, payment_id, and signature are required"
+    });
+    return;
+  }
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keySecret) {
+    res.status(500).json({ success: false, error: "Server payment configuration missing" });
+    return;
+  }
+  try {
+    const hmac = crypto.createHmac("sha256", keySecret);
+    hmac.update(`${order_id}|${payment_id}`);
+    const generatedSignature = hmac.digest("hex");
+    const genBuf = Buffer.from(generatedSignature, "utf-8");
+    const sigBuf = Buffer.from(signature, "utf-8");
+    const isValid = genBuf.length === sigBuf.length && crypto.timingSafeEqual(genBuf, sigBuf);
+    if (!isValid) {
+      if (userId) {
+        await pool.query(`UPDATE public.subscription_payments SET status = 'failed' WHERE razorpay_order_id = $1`, [
+          order_id
+        ]).catch(() => {
+        });
+      }
+      res.status(400).json({
+        success: false,
+        error: "Payment verification failed: signature mismatch"
+      });
+      return;
+    }
+    if (userId) {
+      await pool.query(
+        `UPDATE public.subscription_payments 
+           SET status = 'captured', razorpay_payment_id = $1, razorpay_signature = $2 
+           WHERE razorpay_order_id = $3`,
+        [payment_id, signature, order_id]
+      ).catch(() => {
+      });
+      await pool.query(
+        `INSERT INTO public.subscriptions 
+           (user_id, plan, subscription_status, subscription_started_at, subscription_expires_at, razorpay_order_id, updated_at) 
+           VALUES ($1, 'pro', 'pro', NOW(), NOW() + INTERVAL '30 days', $2, NOW()) 
+           ON CONFLICT (user_id) DO UPDATE SET 
+             plan = 'pro', 
+             subscription_status = 'pro', 
+             subscription_started_at = NOW(), 
+             subscription_expires_at = NOW() + INTERVAL '30 days', 
+             razorpay_order_id = $2, 
+             updated_at = NOW()`,
+        [userId, order_id]
+      ).catch(() => {
+      });
+    }
+    res.json({
+      success: true,
+      message: "Payment verified successfully",
+      payment_id,
+      order_id
+    });
+  } catch (err) {
+    console.error("Error verifying payment:", err.message);
+    res.status(500).json({ success: false, error: "Internal server error verifying payment" });
+  }
+});
 app.post("/api/subscription/verify-payment", async (req, res) => {
   const { userId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
   if (!userId || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {

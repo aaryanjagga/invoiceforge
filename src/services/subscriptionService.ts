@@ -208,6 +208,83 @@ export const verifyProPayment = async (
   return data;
 };
 
+/**
+ * Generic Razorpay Standard Checkout order creator
+ */
+export const createRazorpayOrder = async (
+  amountInPaise: number = 9900,
+  currency: string = 'INR',
+  receipt?: string,
+  notes?: Record<string, any>
+): Promise<RazorpayOrderResponse> => {
+  const res = await fetch('/api/create-order', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      amount: amountInPaise,
+      currency,
+      receipt,
+      notes,
+    }),
+  });
+
+  const contentType = res.headers.get('content-type') || '';
+  let data: any = null;
+  if (contentType.includes('application/json')) {
+    data = await res.json().catch(() => null);
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.error || `Failed to create Razorpay order (${res.status})`);
+  }
+
+  return {
+    orderId: data.order_id || data.id,
+    amount: data.amount,
+    currency: data.currency,
+    keyId: data.key_id,
+  };
+};
+
+/**
+ * Generic Razorpay payment verification
+ */
+export const verifyRazorpayPayment = async (
+  order_id: string,
+  payment_id: string,
+  signature: string,
+  userId?: string
+): Promise<{ success: boolean; message: string }> => {
+  const res = await fetch('/api/verify-payment', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      order_id,
+      payment_id,
+      signature,
+      userId,
+    }),
+  });
+
+  const contentType = res.headers.get('content-type') || '';
+  let data: any = null;
+  if (contentType.includes('application/json')) {
+    data = await res.json().catch(() => null);
+  }
+
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.error || 'Payment signature verification failed');
+  }
+
+  return data;
+};
+
 export interface PaymentRecord {
   id: string;
   razorpay_order_id: string;
